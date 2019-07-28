@@ -1,4 +1,5 @@
 {
+  "compileOnSave": true,
   "compilerOptions": {
     "baseUrl": "tsconfig",
     "target": "es6",
@@ -12,6 +13,7 @@
     "noUnusedParameters": false,
     "noUnusedLocals": false,
     "skipDefaultLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "strictNullChecks": true,

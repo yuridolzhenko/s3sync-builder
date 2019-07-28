@@ -34,9 +34,8 @@ describe('AWS S3 Sync Builder', () => {
         logger.subscribe(ev => logs.push(ev.message));
 
 // A "run" can contain multiple outputs, and contains progress information.
-        const run = await architect.scheduleBuilder('@yuridolzhenko/s3deploy-builder:deploy', {
-            command: 'blah',
-            args: [__dirname],
+        const run = await architect.scheduleBuilder('@yuridolzhenko/s3sync-builder:deploy', {
+            targetBucket: 'eds3synctest'
         }, {logger});  // We pass the logger for checking later.
 
 
