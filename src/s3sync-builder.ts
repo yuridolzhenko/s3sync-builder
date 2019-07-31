@@ -1,10 +1,18 @@
 import {BuilderOutput, createBuilder} from '@angular-devkit/architect';
 import {JsonObject} from '@angular-devkit/core';
 import * as AWS from 'aws-sdk';
-import {DeleteObjectRequest, ListObjectsV2Output, ListObjectsV2Request, Object} from "aws-sdk/clients/s3";
+import {
+    DeleteObjectRequest,
+    ListObjectsV2Output,
+    ListObjectsV2Request,
+    Object,
+    PutObjectRequest
+} from "aws-sdk/clients/s3";
 import {from, Observable, of} from "rxjs";
 import {count, mergeAll, mergeMap, tap} from "rxjs/operators";
 import * as glob from "glob";
+import * as path from "path";
+import * as fs from "fs";
 
 interface Options extends JsonObject {
 
@@ -12,29 +20,6 @@ interface Options extends JsonObject {
     targetBucket: string;
 
 }
-
-// async function allBucketKeys(s3: any, bucket: string) {
-//     const params = {
-//         Bucket: bucket,
-//     };
-//
-//     var keys: any = [];
-//     for (;;) {
-//         var data = await s3.listObjects(params).promise();
-//
-//         data.Contents.forEach((elem: any) => {
-//             keys = keys.concat(elem.Key);
-//         });
-//
-//         if (!data.IsTruncated) {
-//             break;
-//         }
-//         params.Marker = data.NextMarker;
-//     }
-//
-//     return keys;
-// }
-
 
 export default createBuilder<Options>((options, context) => {
     return new Promise<BuilderOutput>((resolve, reject) => {
@@ -72,32 +57,7 @@ export default createBuilder<Options>((options, context) => {
             });
         };
 
-        // let scanFolder = function getAllFiles(dirPath: string): void {
-        //     fs.readdirSync(dirPath).forEach(function(file) {
-        //         let filepath = path.join(dirPath , file);
-        //         let stat= fs.statSync(filepath);
-        //         if (stat.isDirectory()) {
-        //             getAllFiles(filepath);
-        //         } else {
-        //             console.info(filepath+ '\n');
-        //         }
-        //     });
-        // };
-
-        let scanLocalContents = function scanLocalContents(localContentsPath: string): Promise<Object[]> {
-            return Promise.resolve([]);
-        };
-
-        let syncContents = function syncContents(): Promise<boolean> {
-            return Promise.resolve(true);
-        };
-
-        let invalidateBucketCache = function invalidateBucketCache(): Promise<boolean> {
-            return Promise.resolve(true);
-        };
-
-        const buildPath: string = '/Users/ydolzhenko/Projects/deploy-tester-app/src';
-
+        const buildPath: string = path.normalize('/Users/ydolzhenko/Projects/deploy-tester-app/src');
 
         const syncObservable: Observable<any> = from(scanBucketContents(listRequest))
             .pipe(
@@ -125,9 +85,25 @@ export default createBuilder<Options>((options, context) => {
                     }));
                 }),
                 mergeAll(),
-                tap((newBucketEntry) => {
-                    console.info(newBucketEntry);
+                mergeMap((newBucketEntry) => {
+                    const basename: string = path.basename(newBucketEntry);
+                    const dirname: string = path.dirname(newBucketEntry);
+                    const relative: string = path.relative(buildPath, dirname);
+                    const pathOnBucket: string = relative + '/' + basename;
+                    const buffer = fs.readFileSync(newBucketEntry);
+                    const putObjectRequest: PutObjectRequest = {
+                        Bucket: options.targetBucket,
+                        Key: pathOnBucket,
+                        Body: buffer
+                    };
+                    return from(S3.putObject(putObjectRequest).promise());
+                }),
+                count(),
+                tap((entriesUploaded) => {
+                    console.info('entries uploaded - ' + entriesUploaded);
                 })
+                // mergeMap(new)
+
             );
 
 
@@ -143,24 +119,6 @@ export default createBuilder<Options>((options, context) => {
 
         //
         context.reportStatus(`Executing "${options.command}"...`);
-        // if (!flag) {
-        //     reject();
-        // }
-        // const child = childProcess.spawn(options.command, options.args, { stdio: 'pipe' });
-
-        // child.stdout.on('data', (data) => {
-        //     context.logger.info(data.toString());
-        // });
-        // child.stderr.on('data', (data) => {
-        //     context.logger.error(data.toString());
-        //     reject();
-        // });
-
-        // context.reportStatus(`Done.`);
-        // child.on('close', code => {
-        //     resolve({ success: code === 0 });
-        // });
-        // resolve({success: true});
     });
 });
 
