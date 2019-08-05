@@ -1,6 +1,6 @@
 {
   "builders": {
-    "deploy": {
+    "sync": {
       "implementation": "./src/s3sync-builder.js",
       "schema": "./src/schema.json",
       "description": "Syncs specified folder to a specified S3 bucket."
