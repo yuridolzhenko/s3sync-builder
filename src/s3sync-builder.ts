@@ -103,9 +103,9 @@ function s3syncBuilder(options: JsonObject,
                     const relative: string = path.relative(buildPath, dirname);
                     const pathOnBucket: string = relative + '/' + basename;
                     const buffer = fs.readFileSync(newBucketEntry);
-                    context.logger.info(`Uploading "${newBucketEntry}" to the "${syncOptions.targetBucketName}" bucket using the key "${pathOnBucket}"...`);
+                    context.logger.info(`Uploading "${newBucketEntry}" to the "${syncOptions.targetBucket}" bucket using the key "${pathOnBucket}"...`);
                     const putObjectRequest: PutObjectRequest = {
-                        Bucket: syncOptions.buildPath,
+                        Bucket: syncOptions.targetBucket,
                         Key: pathOnBucket,
                         Body: buffer
                     };
