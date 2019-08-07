@@ -1,6 +1,6 @@
 {
   "name": "@yuridolzhenko/s3sync-builder",
-  "version": "1.1.0-0",
+  "version": "0.0.1-0",
   "description": "",
   "main": "index.js",
   "builders": "builders.json",
