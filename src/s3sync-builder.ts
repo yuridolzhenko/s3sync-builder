@@ -62,15 +62,23 @@ function s3syncBuilder(options: JsonObject,
             });
         };
         const buildPath: string = path.normalize(syncOptions.buildPath);
+        let totalArtifactsLength = 0;
+        let totalExistingFiles = 0;
+        let deletedMarker = 0;
+        let syncedMarker = 0;
+
+        if (!fs.existsSync(`./${buildPath}`)) {
+            context.logger.error('Specified path does not exist.');
+            context.reportStatus('Specified path does not exist.');
+            resolve({success: false});
+        }
         const syncObservable: Observable<any> = from(scanBucketContents(listRequest))
             .pipe(
                 tap((existingFiles: Object[]) => {
                     context.reportStatus(`Found ${existingFiles.length} existing files in the bucket. About to delete them...`);
+                    totalExistingFiles = totalExistingFiles + existingFiles.length;
                 }),
                 mergeAll(),
-                tap((bucketEntry) => {
-                    context.reportStatus(`Deleting "${bucketEntry.Key}"...`);
-                }),
                 mergeMap((bucketEntry) => {
                     let bucketEntryKey: string = bucketEntry.Key as string;
                     let deleteObjectRequest: DeleteObjectRequest = {
@@ -78,6 +86,10 @@ function s3syncBuilder(options: JsonObject,
                         Key: bucketEntryKey
                     };
                     return from(S3.deleteObject(deleteObjectRequest).promise());
+                }),
+                tap(entry => {
+                    deletedMarker = deletedMarker + 1;
+                    context.reportProgress(deletedMarker, totalExistingFiles, 'Cleaning up the bucket...');
                 }),
                 count(),
                 tap((totalCount: number) => {
@@ -91,6 +103,7 @@ function s3syncBuilder(options: JsonObject,
                     }));
                 }),
                 tap((buildPathContents: string[]) => {
+                    totalArtifactsLength = buildPathContents.length;
                     context.reportStatus(`Found ${buildPathContents.length} files on the build path. About to sync them to the bucket...`);
                 }),
                 mergeAll(),
@@ -103,13 +116,17 @@ function s3syncBuilder(options: JsonObject,
                     const relative: string = path.relative(buildPath, dirname);
                     const pathOnBucket: string = relative + '/' + basename;
                     const buffer = fs.readFileSync(newBucketEntry);
-                    context.logger.info(`Uploading "${newBucketEntry}" to the "${syncOptions.targetBucket}" bucket using the key "${pathOnBucket}"...`);
+                    context.logger.info(`Found "${newBucketEntry}"...`);
                     const putObjectRequest: PutObjectRequest = {
                         Bucket: syncOptions.targetBucket,
                         Key: pathOnBucket,
                         Body: buffer
                     };
                     return from(S3.putObject(putObjectRequest).promise());
+                }),
+                tap(entry => {
+                    syncedMarker = syncedMarker + 1;
+                    context.reportProgress(syncedMarker, totalExistingFiles, `Syncing to the "${syncOptions.targetBucket}"...`);
                 }),
                 count(),
                 tap((entriesUploaded: number) => {
@@ -120,9 +137,10 @@ function s3syncBuilder(options: JsonObject,
         syncObservable.subscribe(whoCares => {
         }, error => {
             context.logger.error('Failed to finish sync routine.', error);
-            console.info('Argh! Got the error, check the logs for details.');
+            context.reportStatus('Failed. Check logs for details.');
             resolve({success: false});
         }, () => {
+            context.logger.info('Done. Have fun.');
             context.reportStatus('Done. Have fun.');
             resolve({success: true});
         });
