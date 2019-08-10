@@ -1,16 +1,26 @@
 {
   "name": "@ydolzhenko/s3sync-builder",
   "version": "0.0.3-5",
-  "description": "",
+  "description": "Angular CLI builder that syncs specified folder to a specified S3 bucket",
   "main": "index.js",
   "builders": "builders.json",
   "scripts": {
     "build": "tsc",
     "test": "ts-node node_modules/jasmine/bin/jasmine src/s3sync-builder.spec.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "angular",
+    "angular-cli",
+    "angular cli builder",
+    "AWS",
+    "S3"
+  ],
+  "author": "Yuri Dolzhenko <yuri.dolzhenko@gmail.com> (https://yuridolzhenko.com)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuridolzhenko/s3sync-builder.git"
+  },
   "devDependencies": {
     "@types/jasmine": "^3.3.12",
     "@types/node": "^11.13.4",
