@@ -37,7 +37,7 @@ function s3syncBuilder(options: JsonObject,
         };
 
         let scanBucketContents = function scanBucketContents(request: ListObjectsV2Request): Promise<Object[]> {
-            let scanningMsg = `Scanning "${syncOptions.targetBucketName}" bucket for existing files...`;
+            let scanningMsg = `Scanning "${syncOptions.targetBucket}" bucket for existing files...`;
             context.logger.info(scanningMsg);
             context.reportStatus(scanningMsg);
             const intermediateRequest: ListObjectsV2Request = Object.assign({}, request);
@@ -68,6 +68,13 @@ function s3syncBuilder(options: JsonObject,
         let totalExistingFiles = 0;
         let deletedMarker = 0;
         let syncedMarker = 0;
+
+        if (!syncOptions.targetBucket && syncOptions.targetBucket !== '') {
+            let bucketNotSpecifiedMsg = 'S3 bucket must be specified.';
+            context.logger.error(bucketNotSpecifiedMsg);
+            context.reportStatus(bucketNotSpecifiedMsg);
+            resolve({success: false});
+        }
 
         if (!fs.existsSync(`./${buildPath}`)) {
             let pathDoesntExistMsg = 'Specified path does not exist.';
@@ -130,7 +137,6 @@ function s3syncBuilder(options: JsonObject,
                     const relative: string = path.relative(buildPath, dirname);
                     const pathOnBucket: string = relative == '' ? basename : relative + '/' + basename;
                     const buffer = fs.readFileSync(newBucketEntry);
-                    context.logger.info(`Found "${newBucketEntry}"...`);
                     const putObjectRequest: PutObjectRequest = {
                         Bucket: syncOptions.targetBucket,
                         Key: pathOnBucket,
