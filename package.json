@@ -1,6 +1,6 @@
 {
   "name": "@ydolzhenko/s3sync-builder",
-  "version": "0.0.3-7",
+  "version": "0.0.3-8",
   "description": "Angular CLI builder that syncs specified folder to a specified S3 bucket",
   "main": "index.js",
   "builders": "builders.json",
