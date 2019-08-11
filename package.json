@@ -21,6 +21,7 @@
     "type": "git",
     "url": "https://github.com/yuridolzhenko/s3sync-builder.git"
   },
+  "bugs": "https://github.com/yuridolzhenko/s3sync-builder/issues",
   "devDependencies": {
     "@types/jasmine": "^3.3.12",
     "@types/node": "^11.13.4",

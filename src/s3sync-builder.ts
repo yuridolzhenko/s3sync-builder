@@ -37,7 +37,9 @@ function s3syncBuilder(options: JsonObject,
         };
 
         let scanBucketContents = function scanBucketContents(request: ListObjectsV2Request): Promise<Object[]> {
-            context.reportStatus(`Scanning "${syncOptions.targetBucketName}" bucket for existing files...`);
+            let scanningMsg = `Scanning "${syncOptions.targetBucketName}" bucket for existing files...`;
+            context.logger.info(scanningMsg);
+            context.reportStatus(scanningMsg);
             const intermediateRequest: ListObjectsV2Request = Object.assign({}, request);
             return new Promise(resolve => {
                 S3.listObjectsV2(intermediateRequest).promise().then((response: ListObjectsV2Output) => {
@@ -68,14 +70,19 @@ function s3syncBuilder(options: JsonObject,
         let syncedMarker = 0;
 
         if (!fs.existsSync(`./${buildPath}`)) {
-            context.logger.error('Specified path does not exist.');
-            context.reportStatus('Specified path does not exist.');
+            let pathDoesntExistMsg = 'Specified path does not exist.';
+            context.logger.error(pathDoesntExistMsg);
+            context.reportStatus(pathDoesntExistMsg);
             resolve({success: false});
         }
         const syncObservable: Observable<any> = from(scanBucketContents(listRequest))
             .pipe(
                 tap((existingFiles: Object[]) => {
-                    context.reportStatus(`Found ${existingFiles.length} existing files in the bucket. About to delete them...`);
+
+
+                    let deleteWarningMsg = `Found ${existingFiles.length} existing files in the bucket. About to delete them...`;
+                    context.logger.info(deleteWarningMsg);
+                    context.reportStatus(deleteWarningMsg);
                     totalExistingFiles = totalExistingFiles + existingFiles.length;
                 }),
                 mergeAll(),
@@ -89,11 +96,14 @@ function s3syncBuilder(options: JsonObject,
                 }),
                 tap(entry => {
                     deletedMarker = deletedMarker + 1;
+                    context.logger.info(`Deleted ${deletedMarker} out of ${totalExistingFiles} files...`);
                     context.reportProgress(deletedMarker, totalExistingFiles, 'Cleaning up the bucket...');
                 }),
                 count(),
                 tap((totalCount: number) => {
-                    context.reportStatus(`Done with deleting ${totalCount} files. Scanning the build path...`);
+                    let buildPathScanningMsg = `Done with deleting ${totalCount} files. Scanning the build path...`;
+                    context.logger.info(buildPathScanningMsg);
+                    context.reportStatus(buildPathScanningMsg);
                 }),
                 mergeMap(whoCares => {
                     return of(glob.sync(`/**`, {
@@ -104,17 +114,21 @@ function s3syncBuilder(options: JsonObject,
                 }),
                 tap((buildPathContents: string[]) => {
                     totalArtifactsLength = buildPathContents.length;
-                    context.reportStatus(`Found ${buildPathContents.length} files on the build path. About to sync them to the bucket...`);
+                    let syncWarningMsg = `Found ${buildPathContents.length} files on the build path. About to sync them to the bucket...`;
+                    context.logger.info(syncWarningMsg);
+                    context.reportStatus(syncWarningMsg);
                 }),
                 mergeAll(),
                 tap((buildPathEntry: string) => {
-                    context.reportStatus(`Uploading "${buildPathEntry}"...`);
+                    let uploadingMsg = `Uploading "${buildPathEntry}"...`;
+                    context.logger.info(uploadingMsg);
+                    context.reportStatus(uploadingMsg);
                 }),
                 mergeMap((newBucketEntry: string) => {
                     const basename: string = path.basename(newBucketEntry);
                     const dirname: string = path.dirname(newBucketEntry);
                     const relative: string = path.relative(buildPath, dirname);
-                    const pathOnBucket: string = relative + '/' + basename;
+                    const pathOnBucket: string = relative == '' ? basename : relative + '/' + basename;
                     const buffer = fs.readFileSync(newBucketEntry);
                     context.logger.info(`Found "${newBucketEntry}"...`);
                     const putObjectRequest: PutObjectRequest = {
@@ -126,6 +140,7 @@ function s3syncBuilder(options: JsonObject,
                 }),
                 tap(entry => {
                     syncedMarker = syncedMarker + 1;
+                    context.logger.info(`Uploaded ${syncedMarker} out of ${totalExistingFiles} entries...`);
                     context.reportProgress(syncedMarker, totalExistingFiles, `Syncing to the "${syncOptions.targetBucket}"...`);
                 }),
                 count(),
